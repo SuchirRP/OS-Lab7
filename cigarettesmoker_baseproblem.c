@@ -15,9 +15,6 @@
 
 #define SMOKERS 3                                                   // total number of smoker threads
 
-/** Semaphores */
-sem_t sem_tob, sem_pap, sem_mat;                                    // semaphores for each smoker
-sem_t sem_agent;                                                    // semaphore for the "scheduling" agent
 
 /** Bools for items */
 int tobacco = 0, paper = 0, match = 0;
@@ -29,7 +26,6 @@ void *smoker(void * arg) {                                          // arg repre
 
     while (1) {
         if( id == 0 ) {                                             // tobacco
-            sem_wait(&sem_tob);                                     // decrement(lock) the tobacco semaphore
             if(paper > 0 && match > 0) {                            // check for the presence of the items on the table
 
                 paper = 0; match = 0;                               // consume items placed on the table
@@ -37,7 +33,6 @@ void *smoker(void * arg) {                                          // arg repre
                 sleep(2);
                 printf("%d: consumed paper(1) and match(2)\n", id);
 
-                sem_post(&sem_agent);                               // incrementing(unlock) the agent semaphore
             }
             else {
                 printf("%d: SCHEDULING ERROR: paper(1) or match(2) is not avaliable on the table\n", id);
@@ -45,7 +40,6 @@ void *smoker(void * arg) {                                          // arg repre
         }
 
         else if(id == 1) {                                          // paper
-            sem_wait(&sem_pap);
 
             if(tobacco > 0 && match > 0) {
                 tobacco = 0; match = 0;
@@ -53,7 +47,6 @@ void *smoker(void * arg) {                                          // arg repre
                 sleep(2);
                 printf("%d: consumed tobacco(0) and match(2)\n", id);
 
-                sem_post(&sem_agent);
             }
             else {
                 printf("%d: SCHEDULING ERROR: tobacco(0) or match(2) is not avalible on the table\n", id);
@@ -61,7 +54,6 @@ void *smoker(void * arg) {                                          // arg repre
         }
 
         else if(id == 2) {                                          // match
-            sem_wait(&sem_mat);
 
             if(tobacco > 0 && paper > 0) {
                 tobacco = 0; paper = 0;
@@ -69,7 +61,6 @@ void *smoker(void * arg) {                                          // arg repre
                 sleep(2);
                 printf("%d: consumed tobacco(0) and paper(1)\n", id);
 
-                sem_post(&sem_agent);
             }
             else {
                 printf("%d: SCHEDULING ERROR: tobacco(0) or paper(1) is not avalible on the table\n", id);
@@ -85,7 +76,6 @@ void *smoker(void * arg) {                                          // arg repre
 // scheduling agent that selects radom elements to place on the table
 void *agent(void * arg) {
     while(1) {
-        sem_wait(&sem_agent);                                       // decrement(lock) the corresponding smokers semaphore
 
         sleep(1);                                                   // Delay for better visability
         int id = rand() % 3;                                        // Generate a random ID for a random item
@@ -96,7 +86,6 @@ void *agent(void * arg) {
 
             paper++; match++;                                       // increment the boolean to indicate presence of the item
 
-            sem_post(&sem_tob);                                     // increment(unlock) the tobacco semaphore
         }
 
         else if (id == 1) {                                         // paper
@@ -104,7 +93,6 @@ void *agent(void * arg) {
 
             tobacco++; match++;
 
-            sem_post(&sem_pap);
         }
 
         else if(id == 2) {                                          // match
@@ -112,7 +100,6 @@ void *agent(void * arg) {
 
             tobacco++; paper++;
 
-            sem_post(&sem_mat);
         }
 
         else {
@@ -126,11 +113,6 @@ void *agent(void * arg) {
  * Main
  */
 int main(int argc, char* argv[]) {
-    // semaphore initialization
-    sem_init(&sem_tob, 0, 0);
-    sem_init(&sem_pap, 0, 0);
-    sem_init(&sem_mat, 0, 0);
-    sem_init(&sem_agent, 0, 1);
 
     // thread creation
     pthread_t tSmokers[SMOKERS], tAgent;
